@@ -9,122 +9,120 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 class Lap implements Comparable<Lap> {
-	int mins;
+	int minutes;
 	int seconds;
-	int nanoseconds;
+	int milliseconds;
 
-	public Lap(int mins, int seconds, int nanoseconds) {
-		this.mins = mins;
+	public Lap(int minutes, int seconds, int milliseconds) {
+		this.minutes = minutes;
 		this.seconds = seconds;
-		this.nanoseconds = nanoseconds;
+		this.milliseconds = milliseconds;
 	}
 
-	@Override
-	public String toString() {
-		return String.format("%d:%02d:%03d", mins, seconds, nanoseconds);
-	}
-
-	public long convertToNanoSeconds() {
-		return (long) nanoseconds + (long) seconds * 1000000000 + (long) mins * 60 * 1000000000;
+	public int convertToMS() {
+		return milliseconds + seconds * 1000 + minutes * 60 * 1000;
 	}
 
 	@Override
 	public int compareTo(Lap o) {
-		return Long.compare(o.convertToNanoSeconds(), this.convertToNanoSeconds());
-	}
-}
-
-class Driver implements Comparable<Driver> {
-	private String driverName;
-	List<Lap> laps;
-
-	public Driver() {
-		this.laps = new ArrayList<>();
-	}
-
-	public Driver(String driverName, List<Lap> laps) {
-		this.driverName = driverName;
-		this.laps = laps;
-	}
-
-	public String getDriverName() {
-		return driverName;
-	}
-
-	private static Lap createLap(String text) {
-		String[] parts = text.split(":");
-		int mins = Integer.parseInt(parts[0]);
-		int seconds = Integer.parseInt(parts[1]);
-		int ns = Integer.parseInt(parts[2]);
-		return new Lap(mins, seconds, ns);
-	}
-
-	public static Driver addRace(String line) {
-		//Vetel 1:55:523 1:54:987 1:56:134
-		String[] parts = line.split("\\s+");
-		String name = parts[0];
-		List<Lap> laps = new ArrayList<>();
-
-		for (int i = 1; i < 4; i++) {
-			laps.add(createLap(parts[i]));
-		}
-
-		return new Driver(name, laps);
-	}
-
-	private String printLaps() {
-		StringBuilder sb = new StringBuilder();
-		for (Lap lap : laps)
-			sb.append(lap.toString()).append(" ");
-		return sb.toString();
+		return Integer.compare(this.convertToMS(), o.convertToMS());
 	}
 
 	@Override
 	public String toString() {
-		return String.format("%s %s",
-				driverName,
-				printLaps());
+		return String.format("%d:%02d:%03d", minutes, seconds, milliseconds);
+	}
+}
+
+class DriverFactory {
+
+	private static Lap createLap(String line) {
+		//1:55:523
+		String[] parts = line.split(":");
+		int min = Integer.parseInt(parts[0]);
+		int sec = Integer.parseInt(parts[1]);
+		int ms = Integer.parseInt(parts[2]);
+		return new Lap(min, sec, ms);
 	}
 
-	public Lap findSmallestLap(List<Lap> laps) {
-		return laps.stream().max(Comparator.naturalOrder()).orElse(null);
+	public static Driver createDriver(String line) {
+		//Vetel 1:55:523 1:54:987 1:56:134
+		String[] parts = line.split("\\s+");
+		String name = parts[0];
+		Lap lap1 = createLap(parts[1]);
+		Lap lap2 = createLap(parts[2]);
+		Lap lap3 = createLap(parts[3]);
+
+		return new Driver(name, lap1, lap2, lap3);
+	}
+}
+
+
+class Driver implements Comparable<Driver> {
+	String name;
+	Lap lap1;
+	Lap lap2;
+	Lap lap3;
+
+	public Driver(String name, Lap lap1, Lap lap2, Lap lap3) {
+		this.name = name;
+		this.lap1 = lap1;
+		this.lap2 = lap2;
+		this.lap3 = lap3;
+	}
+
+	public Lap findFastestLap() {
+		int l1Time = lap1.convertToMS();
+		int l2Time = lap2.convertToMS();
+		int l3Time = lap3.convertToMS();
+
+		int min = Math.min(Math.min(l1Time, l2Time), l3Time);
+
+		if (min == l1Time) return lap1;
+		if (min == l2Time) return lap2;
+		return lap3;
 	}
 
 	@Override
 	public int compareTo(Driver o) {
-		return this.findSmallestLap(laps).compareTo(o.findSmallestLap(o.laps));
+		return this.findFastestLap().compareTo(o.findFastestLap());
+	}
+
+	@Override
+	public String toString() {
+		return String.format("%-10s%10s", name, findFastestLap());
 	}
 }
 
 class F1Race {
 	List<Driver> drivers;
 
-	public F1Race() {
-		this.drivers = new ArrayList<>();
-	}
-
 	public F1Race(List<Driver> drivers) {
 		this.drivers = drivers;
+	}
+
+	public F1Race() {
+		this.drivers = new ArrayList<>();
 	}
 
 	public void readResults(InputStream in) {
 		BufferedReader br = new BufferedReader(new InputStreamReader(in));
 
-		drivers = br.lines()
-				.map(Driver::addRace)
+		this.drivers = br.lines()
+				.map(DriverFactory::createDriver)
 				.collect(Collectors.toList());
 	}
 
-	public void printSorted(PrintStream out) {
+	public void printSorted(OutputStream out) {
 		PrintWriter pw = new PrintWriter(out);
 
-		drivers = drivers.stream().sorted(Comparator.reverseOrder()).collect(Collectors.toList());
+		drivers = drivers.stream()
+				.sorted(Comparator.naturalOrder())
+				.collect(Collectors.toList());
 
 		for (int i = 0; i < drivers.size(); i++) {
-			pw.println(String.format("%d. %-10s%10s",
-					i + 1,
-					drivers.get(i).getDriverName(),
-					drivers.get(i).findSmallestLap(drivers.get(i).laps)));
+			pw.print(i + 1 + ". ");
+			pw.println(drivers.get(i));
 		}
 
 		pw.flush();
@@ -141,4 +139,3 @@ public class F1Test {
 	}
 
 }
-
