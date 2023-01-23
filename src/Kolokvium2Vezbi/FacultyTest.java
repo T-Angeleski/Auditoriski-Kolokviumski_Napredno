@@ -1,236 +1,43 @@
 package Kolokvium2Vezbi;
 
 import java.util.*;
+import java.util.stream.IntStream;
+//package mk.ukim.finki.vtor_kolokvium;
+
+import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-class OperationNotAllowedException extends Exception {
-	public OperationNotAllowedException(String message) {
-		super(message);
-	}
-}
-
-abstract class Student {
-	String id;
-	Set<String> courses;
-	Map<Integer, List<Integer>> gradesByTerm;
-
-	public Student(String id) {
-		this.id = id;
-		this.courses = new TreeSet<>();
-		this.gradesByTerm = new TreeMap<>();
-	}
-
-	String getGraduationLog() {
-		return String.format("Student with ID %s graduated with average grade %.2f",
-				id, averageGrade());
-	}
-
-	double averageGrade() {
-		return gradesByTerm.values().stream()
-				.flatMap(i -> i.stream())
-				.mapToInt(i -> i)
-				.average().orElse(5.0);
-	}
-
-	double averageGradeForTerm(int term) {
-		return gradesByTerm.get(term).stream()
-				.mapToInt(i -> i).average().orElse(5.0);
-	}
-
-	abstract boolean addGrade(int term, String courseName, int grade) throws OperationNotAllowedException;
-
-	void validate(int term) throws OperationNotAllowedException {
-		if (!gradesByTerm.containsKey(term))
-			throw new OperationNotAllowedException(
-					String.format("Term %d is not possible for student with ID %s",
-							term, id)
-			);
-
-		if (gradesByTerm.get(term).size() == 3)
-			throw new OperationNotAllowedException(
-					String.format("Student %s already has 3 grades in term %d",
-							id, term)
-			);
-	}
-
-	int countOfCoursesPassed() {
-		return gradesByTerm.values().stream()
-				.mapToInt(i -> i.size())
-				.sum();
-	}
-
-	public String getDetailedReport() {
-		StringBuilder sb = new StringBuilder();
-		sb.append(String.format("Student: %d\n", id));
-		gradesByTerm.keySet()
-				.forEach(term -> sb.append(getTermReport(term)).append("\n"));
-
-		sb.append(String.format("Average grade: %.2f\nCourses attended: %s",
-				averageGrade(),
-				String.join(",", courses)));
-
-		return sb.toString();
-	}
-
-	private String getTermReport(int term) {
-		return String.format("Term %d\nCourses: %d\n Average grade for term: %.2f",
-				term,
-				gradesByTerm.get(term).size(),
-				averageGradeForTerm(term));
-	}
-
-	public String getShortReport() {
-		return String.format("Student: %s Courses passed: %d Average grade: %.2f",
-				id,
-				countOfCoursesPassed(),
-				averageGrade());
-	}
-
-	public String getId() {
-		return id;
-	}
-}
-
-
-class StudentThreeYears extends Student {
-
-	public StudentThreeYears(String id) {
-		super(id);
-		IntStream.range(1, 6)
-				.forEach(i -> gradesByTerm.putIfAbsent(i, new ArrayList<>()));
-	}
-
-	@Override
-	boolean addGrade(int term, String courseName, int grade) throws OperationNotAllowedException {
-		validate(term);
-		gradesByTerm.get(term).add(grade);
-		courses.add(courseName);
-
-		return countOfCoursesPassed() == 18;
-	}
-
-	@Override
-	String getGraduationLog() {
-		return super.getGraduationLog() + " in 3 years.";
-	}
-}
-
-class StudentFourYears extends Student {
-	public StudentFourYears(String id) {
-		super(id);
-		IntStream.range(1, 9)
-				.forEach(i -> gradesByTerm.putIfAbsent(i, new ArrayList<>()));
-
-	}
-
-	@Override
-	String getGraduationLog() {
-		return super.getGraduationLog() + " in 4 years.";
-	}
-
-	@Override
-	boolean addGrade(int term, String courseName, int grade) throws OperationNotAllowedException {
-		validate(term);
-		gradesByTerm.get(term).add(grade);
-		courses.add(courseName);
-
-		return countOfCoursesPassed() == 24;
-	}
-}
-
-class Course {
-	String courseName;
-	IntSummaryStatistics statistics;
-
-	public Course(String courseName) {
-		this.courseName = courseName;
-		statistics = new IntSummaryStatistics();
-	}
-
-	void addGrade(int grade) {
-		statistics.accept(grade);
-	}
-
-	int getStudentsCount() {
-		return (int) statistics.getCount();
-	}
-
-	double getCourseAverageGrade() {
-		return statistics.getAverage();
-	}
-
-	public String getCourseName() {
-		return courseName;
-	}
-
-	@Override
-	public String toString() {
-		return String.format("%s %d %.2f",
-				courseName,
-				statistics.getCount(),
-				statistics.getAverage());
-	}
-}
 
 class Faculty {
-	Map<String, Student> studentsById;
-	Map<String, Course> coursesByName;
-	StringBuilder logs;
+
 
 	public Faculty() {
-		studentsById = new HashMap<>();
-		coursesByName = new HashMap<>();
-		logs = new StringBuilder();
+
 	}
 
 	void addStudent(String id, int yearsOfStudies) {
-		studentsById.put(id,
-				yearsOfStudies == 3 ? new StudentThreeYears(id) : new StudentFourYears(id));
 	}
 
 	void addGradeToStudent(String studentId, int term, String courseName, int grade) throws OperationNotAllowedException {
-		Student student = studentsById.get(studentId);
-		boolean graduated = student.addGrade(term, courseName, grade);
 
-		coursesByName.putIfAbsent(courseName, new Course(courseName));
-		coursesByName.get(courseName).addGrade(grade);
-
-		if (graduated) {
-			logs.append(student.getGraduationLog()).append("\n");
-			studentsById.remove(studentId);
-		}
 	}
 
 	String getFacultyLogs() {
-		return logs.deleteCharAt(logs.length() - 1).toString();
+		return "";
 	}
 
 	String getDetailedReportForStudent(String id) {
-		return studentsById.get(id).getDetailedReport();
+		return "";
 	}
 
 	void printFirstNStudents(int n) {
-		Comparator<Student> studentComparator = Comparator.comparing(Student::countOfCoursesPassed)
-				.thenComparing(Student::averageGrade)
-				.thenComparing(Student::getId).reversed();
 
-		TreeSet<Student> students = new TreeSet<>(studentComparator);
-		students.addAll(studentsById.values());
-		students.stream()
-				.limit(n)
-				.forEach(student -> System.out.println(student.getShortReport()));
 	}
 
 	void printCourses() {
-		Comparator<Course> courseComparator =
-				Comparator.comparing(Course::getStudentsCount)
-						.thenComparing(Course::getCourseAverageGrade)
-						.thenComparing(Course::getCourseName);
-		TreeSet<Course> coursesSet = new TreeSet<>(courseComparator);
-		coursesSet.addAll(coursesByName.values());
-		coursesSet.forEach(System.out::println);
+
 	}
 }
 
