@@ -5,13 +5,13 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 
-class Student {
+class StudentX {
 	String code;
 	String major;
 	List<Integer> grades;
 	float average;
 
-	public Student(String code, String major, List<Integer> grades) {
+	public StudentX(String code, String major, List<Integer> grades) {
 		this.code = code;
 		this.major = major;
 		this.grades = grades;
@@ -38,7 +38,7 @@ class Student {
 
 class StudentFactory {
 
-	public static Student createStudent(String line) {
+	public static StudentX createStudent(String line) {
 		String[] parts = line.split("\\s+");
 		String code = parts[0];
 		String major = parts[1];
@@ -47,13 +47,13 @@ class StudentFactory {
 			grades.add(Integer.parseInt(parts[i]));
 		}
 
-		return new Student(code, major, grades);
+		return new StudentX(code, major, grades);
 	}
 
 }
 
 class StudentRecords {
-	Map<String, List<Student>> studentsByMajor;
+	Map<String, List<StudentX>> studentsByMajor;
 	//Major -> (Grade -> Number of said grade)
 	Map<String, Map<Integer, Integer>> majorsByGrades;
 
@@ -65,11 +65,11 @@ class StudentRecords {
 	int readRecords(InputStream in) {
 		BufferedReader br = new BufferedReader(new InputStreamReader(in));
 
-		List<Student> students = br.lines()
+		List<StudentX> students = br.lines()
 				.map(StudentFactory::createStudent)
 				.collect(Collectors.toList());
 
-		for (Student student : students) {
+		for (StudentX student : students) {
 			studentsByMajor.putIfAbsent(student.major, new ArrayList<>());
 			studentsByMajor.get(student.major).add(student);
 
@@ -90,8 +90,8 @@ class StudentRecords {
 		for (String major : studentsByMajor.keySet()) {
 			pw.println(major);
 			studentsByMajor.get(major).stream()
-					.sorted(Comparator.comparing(Student::getAverage).reversed()
-							.thenComparing(Student::getCode))
+					.sorted(Comparator.comparing(StudentX::getAverage).reversed()
+							.thenComparing(StudentX::getCode))
 					.forEach(pw::println);
 		}
 

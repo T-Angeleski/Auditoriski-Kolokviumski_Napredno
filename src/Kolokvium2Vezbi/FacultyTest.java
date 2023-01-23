@@ -1,39 +1,144 @@
 package Kolokvium2Vezbi;
 
-import java.util.*;
-import java.util.stream.IntStream;
-//package mk.ukim.finki.vtor_kolokvium;
 
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+class OperationNotAllowedException extends Exception {
+	OperationNotAllowedException(String message) {
+		super(message);
+	}
+}
+
+class Student {
+	String id;
+	int yearsOfStudies;
+	//Term -> (Course -> Grade)
+	Map<Integer, Map<String, Integer>> gradesByCourseAndTerm;
+	List<Integer> allGrades;
+	int coursesPassed;
+	TreeSet<String> allCourses;
+
+	public Student(String id, int yearsOfStudies) {
+		this.id = id;
+		this.yearsOfStudies = yearsOfStudies;
+		gradesByCourseAndTerm = new TreeMap<>();
+		coursesPassed = 0;
+		allGrades = new ArrayList<>();
+		allCourses = new TreeSet<>();
+
+		//Years 1 to 6/8
+		IntStream.range(1, yearsOfStudies * 2 + 1)
+				.forEach(i -> gradesByCourseAndTerm.put(i, new HashMap<>()));
+	}
+
+	public int getCoursesPassed() {
+		return coursesPassed;
+	}
+
+	public void addGrade(int term, String courseName, int grade) throws OperationNotAllowedException {
+		if (!gradesByCourseAndTerm.containsKey(term))
+			throw new OperationNotAllowedException(String.format("Term %d is not possible for student with ID %s", term, id));
+
+		if (gradesByCourseAndTerm.get(term).size() == 3)
+			throw new OperationNotAllowedException(String.format("Student %s already has 3 grades in term %d", id, term));
+
+		gradesByCourseAndTerm.get(term).put(courseName, grade);
+		allGrades.add(grade);
+		allCourses.add(courseName);
+		++coursesPassed;
+	}
+
+	public boolean graduated() {
+		return yearsOfStudies == 4 ? coursesPassed == 24 : coursesPassed == 18;
+	}
+
+	public String getGraduationLog() {
+		return String.format("Student with ID %s graduated with average grade %.2f in %d years.",
+				id,
+				averageGrade(),
+				yearsOfStudies);
+	}
+
+	public double averageGrade() {
+		return allGrades.stream()
+				.mapToInt(i -> i)
+				.average().orElse(5.0);
+	}
+
+	private double averageGrade(int term) {
+		return gradesByCourseAndTerm.get(term).values().stream()
+				.mapToInt(i -> i)
+				.average().orElse(5.0);
+	}
+
+	public String getDetailedReport() {
+		StringBuilder sb = new StringBuilder();
+		sb.append(String.format("Student: %s\n", id));
+
+		gradesByCourseAndTerm.entrySet().forEach(entry -> {
+			int term = entry.getKey();
+			Map<String, Integer> gradesByCourse = entry.getValue();
+
+			sb.append(String.format("Term %d\n", term));
+			sb.append(String.format("Courses: %d\n", gradesByCourse.size()));
+			sb.append(String.format("Average grade for term: %.2f\n", averageGrade(term)));
+		});
+
+		sb.append(String.format("Average grade: %.2f\n", averageGrade()));
+		sb.append(String.format("Courses attended: %s", String.join(",", allCourses)));
+
+		return sb.toString();
+	}
+
+	public String shortReport() {
+		return String.format("Student: %s Courses passed: %d Average grade: %.2f",
+				id, coursesPassed, averageGrade());
+	}
+}
 
 class Faculty {
-
+	Map<String, Student> studentsById;
+	List<String> logs;
 
 	public Faculty() {
-
+		studentsById = new HashMap<>();
+		logs = new ArrayList<>();
 	}
 
 	void addStudent(String id, int yearsOfStudies) {
+		Student student = new Student(id, yearsOfStudies);
+		studentsById.put(id, student);
 	}
 
 	void addGradeToStudent(String studentId, int term, String courseName, int grade) throws OperationNotAllowedException {
-
+		Student student = studentsById.get(studentId);
+		student.addGrade(term, courseName, grade);
+		if (student.graduated()) {    // Delete if graduates
+			studentsById.remove(studentId);
+			logs.add(student.getGraduationLog());
+		}
 	}
 
 	String getFacultyLogs() {
-		return "";
+		return String.join("\n", logs);
 	}
 
 	String getDetailedReportForStudent(String id) {
-		return "";
+		return studentsById.get(id).getDetailedReport();
 	}
 
 	void printFirstNStudents(int n) {
+		Comparator<Student> comparator = Comparator.comparing(Student::getCoursesPassed)
+				.thenComparing(Student::averageGrade)
+				.thenComparing(s -> s.id).reversed();
 
+		studentsById.values().stream()
+				.sorted(comparator)
+				.limit(10)
+				.forEach(student -> System.out.println(student.shortReport()));
 	}
 
 	void printCourses() {
